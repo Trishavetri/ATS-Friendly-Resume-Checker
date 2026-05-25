@@ -1,0 +1,170 @@
+package ui;
+
+import logic.ATSChecker;
+
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
+
+import javax.swing.*;
+import java.awt.*;
+import java.io.File;
+import java.util.List;
+import java.util.Map;
+
+public class ATSUI extends JFrame {
+
+    JTextArea resultArea;
+
+    File selectedFile;
+
+    public ATSUI() {
+
+        setTitle("ATS Resume Checker");
+
+        setSize(700, 500);
+
+        setLayout(new BorderLayout());
+
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
+
+        JLabel title =
+                new JLabel(
+                        "ATS FRIENDLY RESUME CHECKER",
+                        JLabel.CENTER
+                );
+
+        title.setFont(
+                new Font(
+                        "Arial",
+                        Font.BOLD,
+                        22
+                )
+        );
+
+        JButton uploadBtn =
+                new JButton("Upload Resume");
+
+        JButton checkBtn =
+                new JButton("Check ATS Score");
+
+        JPanel topPanel =
+                new JPanel();
+
+        topPanel.add(uploadBtn);
+
+        topPanel.add(checkBtn);
+
+        resultArea =
+                new JTextArea();
+
+        resultArea.setEditable(false);
+
+        resultArea.setFont(
+                new Font(
+                        "Monospaced",
+                        Font.PLAIN,
+                        16
+                )
+        );
+
+        add(title, BorderLayout.NORTH);
+
+        add(topPanel, BorderLayout.SOUTH);
+
+        add(new JScrollPane(resultArea),
+                BorderLayout.CENTER);
+
+        uploadBtn.addActionListener(
+                e -> uploadResume()
+        );
+
+        checkBtn.addActionListener(
+                e -> checkATS()
+        );
+
+        setVisible(true);
+    }
+
+    void uploadResume() {
+
+        JFileChooser chooser =
+                new JFileChooser();
+
+        int res =
+                chooser.showOpenDialog(this);
+
+        if (res ==
+                JFileChooser.APPROVE_OPTION) {
+
+            selectedFile =
+                    chooser.getSelectedFile();
+
+            resultArea.setText(
+                    "Selected Resume:\n\n"
+                            + selectedFile.getName()
+            );
+        }
+    }
+
+    void checkATS() {
+
+        if (selectedFile == null) {
+
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Upload Resume First!"
+            );
+
+            return;
+        }
+
+        try {
+
+            PDDocument document =
+                    PDDocument.load(selectedFile);
+
+            PDFTextStripper stripper =
+                    new PDFTextStripper();
+
+            String resumeText =
+                    stripper.getText(document);
+
+            document.close();
+
+            Map<String, Object> result =
+                    ATSChecker.checkResume(
+                            resumeText
+                    );
+
+            int score =
+                    (int) result.get("score");
+
+            List<String> missing =
+                    (List<String>) result.get("missing");
+
+            StringBuilder sb =
+                    new StringBuilder();
+
+            sb.append("ATS SCORE : ")
+                    .append(score)
+                    .append("%\n\n");
+
+            sb.append("Missing Keywords:\n\n");
+
+            for (String s : missing) {
+
+                sb.append("• ")
+                        .append(s)
+                        .append("\n");
+            }
+
+            resultArea.setText(
+                    sb.toString()
+            );
+
+        } catch (Exception ex) {
+
+            ex.printStackTrace();
+        }
+    }
+}
