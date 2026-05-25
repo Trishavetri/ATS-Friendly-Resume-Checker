@@ -1,0 +1,105 @@
+package logic;
+
+import db.DBConnection;
+
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.Statement;
+import java.util.*;
+
+public class ATSChecker {
+
+    public static Map<String, Object> checkResume(
+            String resumeText
+    ) {
+
+        int matched = 0;
+
+        List<String> missing =
+                new ArrayList<>();
+
+        List<String> keywords =
+                new ArrayList<>();
+
+        try {
+
+            Connection con =
+                    DBConnection.getConnection();
+
+            Statement st =
+                    con.createStatement();
+
+            ResultSet rs =
+                    st.executeQuery(
+                            "SELECT keyword FROM job_keywords"
+                    );
+
+            while (rs.next()) {
+
+                keywords.add(
+                        rs.getString("keyword")
+                );
+            }
+
+            for (String key : keywords) {
+
+                if (resumeText.toLowerCase()
+                        .contains(
+                                key.toLowerCase()
+                        )) {
+
+                    matched++;
+
+                } else {
+
+                    missing.add(key);
+                }
+            }
+
+        } catch (Exception e) {
+
+            e.printStackTrace();
+        }
+
+        int score =
+                (matched * 100)
+                        / keywords.size();
+
+        saveResult(score, missing);
+
+        Map<String, Object> result =
+                new HashMap<>();
+
+        result.put("score", score);
+
+        result.put("missing", missing);
+
+        return result;
+    }
+
+    static void saveResult(
+            int score,
+            List<String> missing
+    ) {
+
+        try {
+
+            Connection con =
+                    DBConnection.getConnection();
+
+            String sql =
+                    "INSERT INTO ats_results(score, missing_keywords) VALUES('" +
+                            score + "','" +
+                            missing.toString() + "')";
+
+            Statement st =
+                    con.createStatement();
+
+            st.executeUpdate(sql);
+
+        } catch (Exception e) {
+
+            e.printStackTrace();
+        }
+    }
+}
